@@ -1,0 +1,153 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The location for this application"
+            }
+        },
+        "registryServer": {
+            "type": "string"
+        },
+        "registryUsername": {
+            "type": "string"
+        },
+        "registryPassword": {
+            "type": "securestring"
+        },
+        "networkName": {
+            "type": "string",
+            "defaultValue": "Network"
+        },
+        "networkCidr": {
+            "type": "string",
+            "defaultValue": "10.1.1.0/24"
+        },
+        "gatewayName": {
+            "type": "string",
+            "defaultValue": "Gateway"
+        },
+        "endpointName": {
+            "type": "string",
+            "defaultValue": "Endpoint"
+        },
+        "applicationName": {
+            "type": "string",
+            "defaultValue": "Application"
+        },
+        "serviceName": {
+            "type": "string",
+            "defaultValue": "Service"
+        },
+        "listenerName": {
+            "type": "string",
+            "defaultValue": "Listener"
+        },
+        "codePackageName": {
+            "type": "string",
+            "defaultValue": "CodePackage"
+        },
+        "codePackageImage": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-09-01-preview",
+            "name": "[parameters('networkName')]",
+            "type": "Microsoft.ServiceFabricMesh/networks",
+            "location": "[parameters('location')]",
+            "dependsOn": [],
+            "properties": {
+                "kind": "Local",
+                "networkAddressPrefix": "[parameters('networkCidr')]"
+            }
+        },
+        {
+            "apiVersion": "2018-09-01-preview",
+            "name": "[parameters('gatewayName')]",
+            "type": "Microsoft.ServiceFabricMesh/gateways",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceFabricMesh/networks', parameters('networkName'))]"
+            ],
+            "properties": {
+                "sourceNetwork": {
+                    "name": "Open"
+                },
+                "destinationNetwork": {
+                    "name": "[resourceId('Microsoft.ServiceFabricMesh/networks', parameters('networkName'))]"
+                },
+                "tcp": [
+                    {
+                        "name": "[parameters('endpointName')]",
+                        "port": 80,
+                        "destination": {
+                            "applicationName": "[parameters('applicationName')]",
+                            "serviceName": "[parameters('serviceName')]",
+                            "endpointName": "[parameters('listenerName')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2018-09-01-preview",
+            "name": "[parameters('applicationName')]",
+            "type": "Microsoft.ServiceFabricMesh/applications",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceFabricMesh/networks', parameters('networkName'))]"
+            ],
+            "properties": {
+                "services": [
+                    {
+                        "type": "Microsoft.ServiceFabricMesh/services",
+                        "name": "[parameters('serviceName')]",
+                        "properties": {
+                            "osType": "linux",
+                            "codePackages": [
+                                {
+                                    "name": "[parameters('codePackageName')]",
+                                    "image": "[concat(parameters('registryServer'), '/', parameters('codePackageImage'))]",
+                                    "endpoints": [
+                                        {
+                                            "name": "[parameters('listenerName')]",
+                                            "port": "80"
+                                        }
+                                    ],
+                                    "environmentVariables": [],
+                                    "resources": {
+                                        "requests": {
+                                            "cpu": "1",
+                                            "memoryInGB": "1"
+                                        }
+                                    },
+                                    "imageRegistryCredential": {
+                                        "server": "[parameters('registryServer')]",
+                                        "username": "[parameters('registryUsername')]",
+                                        "password": "[parameters('registryPassword')]"
+                                    }
+                                }
+                            ],
+                            "replicaCount": "1",
+                            "networkRefs": [
+                                {
+                                    "name": "[resourceId('Microsoft.ServiceFabricMesh/networks', parameters('networkName'))]",
+                                    "endpointRefs": [
+                                        {
+                                            "name": "[parameters('listenerName')]"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
