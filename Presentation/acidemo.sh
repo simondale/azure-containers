@@ -14,11 +14,11 @@ az container create --name $CONTAINER_NAME \
                     --registry-username $REGISTRY_USERNAME \
                     --registry-password $REGISTRY_PASSWORD
 
-: ${CONTAINER_URL="http://`az container show --name helloworld --resource-group $RESOURCE_GROUP --output json | jq -r .ipAddress.ip`:`az container show --name helloworld --resource-group $RESOURCE_GROUP --output json | jq -r .ipAddress.ports[0].port`""}
+: ${CONTAINER_URL="http://$(az container show --name helloworld --resource-group $RESOURCE_GROUP --query "ipAddress.ip" | sed -e 's/\"//g'):$(az container show --name helloworld --resource-group $RESOURCE_GROUP --query "ipAddress.ports[0].port" | sed -e 's/\"//g')"}
 
-echo "Calling Azure Container Instance URL: $CONTAINER_URL"
-curl $CONTAINER_URL
-echo ''
+#echo "Calling Azure Container Instance URL: $CONTAINER_URL"
+#curl $CONTAINER_URL
+#echo ''
 
 
 
